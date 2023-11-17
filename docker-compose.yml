@@ -1,0 +1,90 @@
+services:
+  web-app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./service:/service
+    environment:
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_NAME=service_app_database
+      - DB_USER=turumbekov_bakir
+      - DB_PASSWORD=bakir03122001
+
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8000"
+
+    depends_on:
+      - database
+
+  database:
+    image: postgres:14.6-alpine
+    environment:
+      - POSTGRES_USER=turumbekov_bakir
+      - POSTGRES_PASSWORD=bakir03122001
+      - POSTGRES_DB=service_app_database
+
+
+  redis:
+    image: redis:7.0.6-alpine
+    hostname: redis
+
+
+  worker:
+    build:
+      context: .
+    hostname: worker
+    entrypoint: celery
+    command : -A celery_app.app worker --loglevel=info
+    volumes:
+      - ./service:/service
+    links:
+      - redis
+    depends_on:
+      - redis
+      - database
+    environment:
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_NAME=service_app_database
+      - DB_USER=turumbekov_bakir
+      - DB_PASSWORD=bakir03122001
+
+
+  worker2:
+    build:
+      context: .
+    hostname: worker2
+    entrypoint: celery
+    command: -A celery_app.app worker --loglevel=info
+    volumes:
+      - ./service:/service
+    links:
+      - redis
+    depends_on:
+      - redis
+      - database
+    environment:
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_NAME=service_app_database
+      - DB_USER=turumbekov_bakir
+      - DB_PASSWORD=bakir03122001
+
+
+  flower:
+    build:
+      context: .
+    hostname: flower
+    entrypoint: celery
+    command : -A celery_app.app flower
+    volumes:
+      - ./service:/service
+    links:
+      - redis
+    depends_on:
+      - redis
+    ports:
+      - "5555:5555"
